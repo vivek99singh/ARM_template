@@ -1,2 +1,1 @@
-First Git Commit..
-This is read only file
+ARM Template for Storage account creation
