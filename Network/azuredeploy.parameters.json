@@ -1,0 +1,57 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vnetName": {
+            "value": "ARMVNET"
+        },
+        "vnetAddressPrefix": {
+            "value": "10.0.0.0/16" 
+        },
+        "subnet1prefix": {
+            "value": "10.0.0.0/24"
+        },
+        "subnet2prefix": {
+            "value": "10.0.1.0/24"
+        },
+        "subnet1name": {
+            "value": "GatewaySubnet"
+        },
+        "subnet2name": {
+            "value": "AzureFirewallSubnet"
+        },
+        "location": {
+            "value": "West Europe"
+        },
+        "ddosProtectionPlanName": {
+            "value": "DDos Protection Plan"
+        },
+        "ddosProtectionPlanEnabled": {
+            "value": true
+        },
+        "GwpublicIpName": {
+            "value": "hubvpngw-pip"
+        },
+        "vpngwname": {
+            "value": "hubvpngwwe"
+        },
+        "ergwpublicIpName": {
+            "value": "hubergw-pip"
+        },
+        "ergwname": {
+            "value": "hubergwwe"
+        },
+        "azfwpublicIpName": {
+            "value": "hubazfw-pip"
+        },
+        "azfwpolicyname": {
+            "value": "hubazfwpolicywe"
+        },
+        "azfwname": {
+            "value": "hubazfwwe"
+        }
+
+
+
+    }
+}
