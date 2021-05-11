@@ -1,0 +1,321 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vnetName": {
+            "type": "string",
+            "defaultValue": "ARMVNET",
+            "metadata": {
+                "description": "VNet Name"
+            }
+        },
+            "vnetAddressPrefix": {
+                "type": "string",
+                "defaultValue":"10.0.0.0/16",
+                "metadata": {
+                    "description": "The Address space for the Virtual Network"
+                }
+            },
+            "subnet1prefix": {
+                    "type": "string",
+                    "defaultValue":"10.0.0.0/24",
+                    "metadata": {
+                        "description": "Subnet Address space"
+                    }
+            },
+            "subnet2prefix": {
+                    "type": "string",
+                    "defaultValue":"10.0.0.0/24",
+                    "metadata": {
+                        "description": "Subnet Address space"
+                    }
+            },
+            "subnet1name": {
+                    "type": "string",
+                    "defaultValue":"GatewaySubnet",
+                    "metadata": {
+                        "description": "The name for the Subnet"
+                    }
+            },
+            "subnet2name": {
+                    "type": "string",
+                    "defaultValue":"AzureFirewallSubnet",
+                    "metadata": {
+                        "description": "The name for the Subnet"
+                    }
+            },
+            "location": {
+                    "type": "string",
+                    "defaultValue":"West Europe",
+                    "metadata": {
+                        "description": "The location for Virtual Network"
+                        }
+                    },
+            "ddosProtectionPlanName": {
+                "type": "string",
+                "defaultValue": "DDos Protection Plan",
+                "metadata": {
+                    "description": "Specify a DDoS protection plan name"
+                }
+            },
+            "ddosProtectionPlanEnabled": {
+                "type": "bool",
+                "defaultValue": true,
+                "metadata": {
+                    "description": "Enable DDoS Protection Plan"
+                }
+            },
+            "GwpublicIpName": {
+                "type": "string",
+                "defaultValue": "hubvpngw-pip",
+                "metadata": {
+                    "description": "The name of the Public IP for VPN Gateway"
+                }
+            },
+            "vpngwname": {
+                "type": "string",
+                "defaultValue": "hubvpngwwe",
+                "metadata": {
+                    "description": "The name of the VPN Gateway"
+                }
+            },
+            "ergwpublicIpName": {
+                "type": "string",
+                "defaultValue": "hubergw-pip",
+                "metadata": {
+                    "description": "The Public IP name for Express Route Gateway"
+                }
+            },
+            "ergwname": {
+                "type": "string",
+                "defaultValue": "hubergwwe",
+                "metadata": {
+                    "description": "The name of the express route gateway"
+                }
+            },
+            "azfwpublicIpName": {
+                "type": "string",
+                "defaultValue": "hubazfw-pip",
+                "metadata": {
+                    "description": "The name of azure firewall Public IP"
+                }
+            },
+            "azfwpolicyname": {
+                "type": "string",
+                "defaultValue": "hubazfwpolicywe",
+                "metadata": {
+                    "description": "The name of the azure firewall policy"
+                }
+            },
+            "azfwname": {
+                "type": "string",
+                "defaultValue": "hubazfwwe",
+                "metadata": {
+                    "description": "The name of the Azure Firewall"
+                }
+            }
+        },
+            "variables": {},
+            "resources": [
+                {
+                    "type":"Microsoft.Network/ddosProtectionPlans",
+                    "apiVersion": "2020-04-01",
+                    "name": "[parameters('ddosProtectionPlanName')]",
+                    "location": "[parameters('location')]",
+                    "properties":{}
+                },
+            
+                {
+                    "type":"Microsoft.Network/virtualNetworks",
+                    "apiVersion": "2020-04-01",
+                    "name": "[parameters('vnetName')]",
+                    "location": "[parameters('location')]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Network/ddosProtectionPlans', parameters('ddosProtectionPlanName'))]"
+                    ],
+                    "properties": {
+                            "addressSpace": {
+                            "addressPrefixes": [
+                                "[parameters('vnetAddressPrefix')]"
+                                ]
+                    },
+                    "enableDdosProtection":"[parameters('ddosProtectionPlanEnabled')]",
+                    "ddosProtectionPlan": {
+                        "id": "[resourceId('Microsoft.Network/ddosProtectionPlans/', parameters('ddosProtectionPlanName'))]"
+                    },       
+
+                    "subnets": [
+                        {
+                            "name": "[parameters('subnet1name')]",
+                            "properties": {
+                            "addressPrefix": "[parameters('subnet1prefix')]"
+                            }
+                        },
+                        {
+                            "name": "[parameters('subnet2name')]",
+                            "properties": {
+                                "addressPrefix": "[parameters('subnet2prefix')]"
+                            }
+                        }
+                ]
+            }
+        },
+                {
+            "type": "Microsoft.Network/publicIpAddresses",
+            "apiVersion": "2020-04-01",
+            "name": "[parameters('GwpublicIpName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Standard"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "Static"
+            },
+            "condition": true
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworkGateways",
+            "apiVersion": "2020-04-01",
+            "name": "[parameters('vpngwname')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', parameters('GwpublicIpName'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            ],
+            "properties": {
+                "gatewayType": "Vpn",
+                "vpnGatewayGeneration": "Generation2",
+                "vpnType": "RouteBased",
+                "ipConfigurations": [
+                    {
+                        "name": "default",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets',parameters('vnetName') , parameters('subnet1name'))]"
+                            },
+                            "publicIpAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIpAddresses', parameters('GwpublicIpName'))]"
+                            }
+                        }
+                    }
+                ],
+                "sku": {
+                    "name": "VpnGw2AZ",
+                    "tier": "VpnGw2AZ"
+                }
+            },
+            "condition": true
+        },
+        {
+            "type": "Microsoft.Network/publicIpAddresses",
+            "apiVersion": "2020-04-01",
+            "name": "[parameters('ergwpublicIpName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Standard"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "Static"
+            },
+            "condition": true
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworkGateways",
+            "apiVersion": "2020-04-01",
+            "name": "[parameters('ergwname')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', parameters('ergwpublicIpName'))]",
+                "[resourceId('Microsoft.Network/virtualNetworkGateways', parameters('vpngwname'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            ],
+            "properties": {
+                "gatewayType": "ExpressRoute",
+                "ipConfigurations": [
+                    {
+                        "name": "default",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnet1name'))]"
+                            },
+                            "publicIpAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('ergwpublicIpName'))]"
+                            }
+                        }
+                    }
+                ],
+                "sku": {
+                    "name": "ErGw1AZ",
+                    "tier": "ErGw1AZ"
+                }
+            },
+            "condition": true
+        },
+        {
+            "type": "Microsoft.Network/publicIpAddresses",
+            "apiVersion": "2020-04-01",
+            "name": "[parameters('azfwpublicIpName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Standard"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "Static"
+            },
+            "condition": true
+        },
+        {
+            "type": "Microsoft.Network/firewallPolicies",
+            "apiVersion": "2020-11-01",
+            "name": "[parameters('azfwpolicyname')]",
+            "location": "westeurope",
+            "properties": {
+                "dnsSettings": {
+                    "enableProxy": true
+                }
+            },
+            "condition": true
+        },
+        {
+            "type": "Microsoft.Network/azureFirewalls",
+            "apiVersion": "2020-04-01",
+            "name": "[parameters('azfwname')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/firewallPolicies', parameters('azfwpolicyname'))]",
+                "[resourceId('Microsoft.Network/publicIpAddresses',parameters('azfwpublicIpName'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks',parameters('vnetName'))]"
+            ],
+            "zones": [
+                "1",
+                "2",
+                "3"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "[parameters('azfwpublicIpName')]",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets',parameters('vnetName'),parameters('subnet2name'))]"
+                            },
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIpAddresses',parameters('azfwpublicIpName'))]"
+                            }
+                        }
+                    }
+                ],
+                "firewallPolicy": {
+                    "id": "[resourceId('Microsoft.Network/firewallPolicies', parameters('azfwpolicyname'))]"
+                }
+            },
+            "condition": true
+        }
+
+
+
+
+    ]
+}
